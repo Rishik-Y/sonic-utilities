@@ -57,7 +57,11 @@ def rank_interfaces_by_traffic(port_rates, count):
 @click.option("--interval", type=click.IntRange(min=0), default=1, show_default=True, help="Sampling interval in seconds")
 @click.option("--json", "json_fmt", is_flag=True, help="Print in JSON format")
 def top(namespace, display, count, interval, json_fmt):
-    """Show top N interfaces by traffic (RX + TX)."""
+    """Show top N interfaces by traffic (RX + TX).
+
+    The command reads interface rate counters for the selected namespace/display
+    scope, ranks interfaces by total throughput, and prints table or JSON output.
+    """
 
     rates = fetch_interface_rates(namespace, display)
     if interval > 0:
@@ -79,9 +83,9 @@ def top(namespace, display, count, interval, json_fmt):
         rows.append([
             row["rank"],
             row["interface"],
-            "{:.2f}".format(row["rx_mbps"]),
-            "{:.2f}".format(row["tx_mbps"]),
-            "{:.2f}".format(row["total_mbps"]),
+            f"{row['rx_mbps']:.2f}",
+            f"{row['tx_mbps']:.2f}",
+            f"{row['total_mbps']:.2f}",
         ])
 
     click.echo(tabulate(rows, headers=headers))
