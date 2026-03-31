@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 from datetime import datetime, timezone
 
@@ -17,8 +18,12 @@ def _safe_float(value):
 
 
 def fetch_interface_rates(namespace, display_option):
-    portstat = Portstat(namespace, display_option)
-    _, ratestat_dict = portstat.get_cnstat_dict()
+    try:
+        portstat = Portstat(namespace, display_option)
+        _, ratestat_dict = portstat.get_cnstat_dict()
+    except Exception as e:
+        click.echo(f"Error fetching interface rates: {e}", err=True)
+        sys.exit(1)
 
     rates = {}
     for port_name, stat in ratestat_dict.items():
@@ -63,16 +68,21 @@ def top(namespace, display, count, interval, json_fmt):
     scope, ranks interfaces by total throughput, and prints table or JSON output.
     """
 
-    rates = fetch_interface_rates(namespace, display)
-    if interval > 0:
-        time.sleep(interval)
+    try:
         rates = fetch_interface_rates(namespace, display)
+        if interval > 0:
+            time.sleep(interval)
+            rates = fetch_interface_rates(namespace, display)
+    except Exception as e:
+        click.echo(f"Error fetching interface rates: {e}", err=True)
+        sys.exit(1)
 
     top_interfaces = rank_interfaces_by_traffic(rates, count)
 
     if json_fmt:
         click.echo(json.dumps({
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "interval_seconds": float(interval),
             "top_interfaces": top_interfaces
         }))
         return

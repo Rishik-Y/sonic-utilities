@@ -100,11 +100,34 @@ def test_top_json_output():
     runner = CliRunner()
     with mock.patch("show.interfaces.top.fetch_interface_rates", return_value=sample_rates), \
          mock.patch("show.interfaces.top.time.sleep", return_value=None):
-        result = runner.invoke(show.cli.commands["interfaces"].commands["top"], ["--json", "--count", "2"])
+        result = runner.invoke(show.cli.commands["interfaces"].commands["top"], ["--json", "--count", "2", "--interval", "2"])
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
     assert "timestamp" in payload
+    assert "interval_seconds" in payload
+    assert payload["interval_seconds"] == 2.0
     assert "top_interfaces" in payload
     assert len(payload["top_interfaces"]) == 2
     assert payload["top_interfaces"][0]["rank"] == 1
+
+
+def test_top_empty_counters():
+    runner = CliRunner()
+    with mock.patch("show.interfaces.top.fetch_interface_rates", return_value={}), \
+         mock.patch("show.interfaces.top.time.sleep", return_value=None):
+        result = runner.invoke(show.cli.commands["interfaces"].commands["top"], [])
+
+    assert result.exit_code == 0
+    data_lines = [line for line in result.output.splitlines() if line.strip() and line.strip()[0].isdigit()]
+    assert len(data_lines) == 0
+
+
+def test_top_portstat_error():
+    runner = CliRunner(mix_stderr=True)
+    with mock.patch("show.interfaces.top.fetch_interface_rates", side_effect=Exception("DB connection failed")), \
+         mock.patch("show.interfaces.top.time.sleep", return_value=None):
+        result = runner.invoke(show.cli.commands["interfaces"].commands["top"], [])
+
+    assert result.exit_code == 1
+    assert "Error fetching interface rates: DB connection failed" in result.output
