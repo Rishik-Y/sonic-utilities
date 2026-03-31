@@ -68,14 +68,10 @@ def top(namespace, display, count, interval, json_fmt):
     scope, ranks interfaces by total throughput, and prints table or JSON output.
     """
 
-    try:
+    rates = fetch_interface_rates(namespace, display)
+    if interval > 0:
+        time.sleep(interval)
         rates = fetch_interface_rates(namespace, display)
-        if interval > 0:
-            time.sleep(interval)
-            rates = fetch_interface_rates(namespace, display)
-    except Exception as e:
-        click.echo(f"Error fetching interface rates: {e}", err=True)
-        sys.exit(1)
 
     top_interfaces = rank_interfaces_by_traffic(rates, count)
 
