@@ -1,0 +1,24 @@
+## TOPIC: Top-N-Interface-Traffic-Visibility
+
+### Problem Statement
+ 
+SONiC currently exposes per-interface traffic counters, but operators lack a simple mechanism to quickly identify which interfaces are carrying the highest traffic at any given time. In large-scale deployments, manually scanning counters is inefficient and error-prone.
+ 
+### Mentorship Objectives
+The objective of this project is to design and implement a SONiC feature that displays the top N (default: 5) interfaces carrying the highest traffic. The feature will be exposed via the SONiC CLI and will leverage existing interface counters.
+ 
+Expected Outcomes and Deliverables
+A new CLI command will be introduced to calculate and display the top interfaces based on real-time traffic rates. The implementation will read interface counters from SONiC databases, compute traffic deltas over a configurable interval, sort interfaces by total throughput, and present the top results in a user-friendly format.
+
+### Key Features 
+
+- Display top 5 interfaces by traffic (RX + TX)
+- Configurable sampling interval
+- JSON output option for automation
+- Minimal performance overhead
+
+### Technology Scope 
+The implementation will be done in Python and integrated into the sonic-utilities CLI. Interface counters will be read from COUNTERS_DB. Traffic rates will be computed using delta-based calculations between two samples.
+
+### Expected Outcome
+At the end of the project, SONiC users will have a simple and effective tool to quickly identify high-traffic interfaces, improving troubleshooting and capacity planning.
