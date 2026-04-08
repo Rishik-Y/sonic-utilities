@@ -1,5 +1,4 @@
 import json
-import sys
 import time
 from datetime import datetime, timezone
 
@@ -22,8 +21,7 @@ def fetch_interface_rates(namespace, display_option):
         portstat = Portstat(namespace, display_option)
         _, ratestat_dict = portstat.get_cnstat_dict()
     except Exception as e:
-        click.echo(f"Error fetching interface rates: {e}", err=True)
-        sys.exit(1)
+        raise click.ClickException(f"Error fetching interface rates: {e}") from e
 
     rates = {}
     for port_name, stat in ratestat_dict.items():
@@ -59,8 +57,14 @@ def rank_interfaces_by_traffic(port_rates, count):
 @click.command(name="top")
 @multi_asic_util.multi_asic_click_options
 @click.option("--count", type=click.IntRange(min=1), default=5, show_default=True, help="Number of top interfaces")
-@click.option("--interval", type=click.IntRange(min=0), default=1, show_default=True, help="Sampling interval in seconds")
-@click.option("--json", "json_fmt", is_flag=True, help="Print in JSON format")
+@click.option(
+    "--interval",
+    type=click.IntRange(min=0),
+    default=1,
+    show_default=True,
+    help="Sampling interval in seconds"
+)
+@click.option("-j", "--json", "json_fmt", is_flag=True, help="Print in JSON format")
 def top(namespace, display, count, interval, json_fmt):
     """Show top N interfaces by traffic (RX + TX).
 
@@ -68,10 +72,9 @@ def top(namespace, display, count, interval, json_fmt):
     scope, ranks interfaces by total throughput, and prints table or JSON output.
     """
 
-    rates = fetch_interface_rates(namespace, display)
     if interval > 0:
         time.sleep(interval)
-        rates = fetch_interface_rates(namespace, display)
+    rates = fetch_interface_rates(namespace, display)
 
     top_interfaces = rank_interfaces_by_traffic(rates, count)
 
@@ -80,7 +83,7 @@ def top(namespace, display, count, interval, json_fmt):
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "interval_seconds": float(interval),
             "top_interfaces": top_interfaces
-        }))
+        }, indent=4))
         return
 
     headers = ["Rank", "Interface", "RX (Mbps)", "TX (Mbps)", "Total (Mbps)"]

@@ -100,7 +100,10 @@ def test_top_json_output():
     runner = CliRunner()
     with mock.patch("show.interfaces.top.fetch_interface_rates", return_value=sample_rates), \
          mock.patch("show.interfaces.top.time.sleep", return_value=None):
-        result = runner.invoke(show.cli.commands["interfaces"].commands["top"], ["--json", "--count", "2", "--interval", "2"])
+        result = runner.invoke(
+            show.cli.commands["interfaces"].commands["top"],
+            ["-j", "--count", "2", "--interval", "2"]
+        )
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
@@ -125,9 +128,9 @@ def test_top_empty_counters():
 
 def test_top_portstat_error():
     runner = CliRunner(mix_stderr=True)
-    with mock.patch("show.interfaces.top.fetch_interface_rates", side_effect=Exception("DB connection failed")), \
+    with mock.patch("show.interfaces.top.Portstat", side_effect=Exception("DB connection failed")), \
          mock.patch("show.interfaces.top.time.sleep", return_value=None):
         result = runner.invoke(show.cli.commands["interfaces"].commands["top"], [])
 
     assert result.exit_code == 1
-    assert "Error fetching interface rates: DB connection failed" in result.output
+    assert "Error: Error fetching interface rates: DB connection failed" in result.output
