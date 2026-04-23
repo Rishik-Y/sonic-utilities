@@ -7,6 +7,13 @@ import show.main as show
 from show.interfaces import top as top_module
 
 
+def test_extract_byte_counters():
+    assert top_module._extract_byte_counters({"rx_byt": "100", "tx_byt": "200"}) == (100.0, 200.0)
+    assert top_module._extract_byte_counters(mock.Mock(rx_byt=300, tx_byt=400)) == (300.0, 400.0)
+    assert top_module._extract_byte_counters({"rx_byt": "invalid", "tx_byt": None}) == (0.0, 0.0)
+    assert top_module._extract_byte_counters(mock.Mock(rx_pps=1)) is None
+
+
 def test_portstat_layer():
     cnstat_dict_1 = {
         "Ethernet0": {"rx_byt": 0, "tx_byt": 0},
@@ -182,6 +189,8 @@ def test_two_sample_delta_computation():
             )
 
     assert result.exit_code == 0
+    header_line = [line for line in result.output.splitlines() if "RX (Mbps)" in line and "TX (Mbps)" in line]
+    assert len(header_line) == 1
     data_lines = [line for line in result.output.splitlines() if line.strip() and line.strip()[0].isdigit()]
     assert len(data_lines) == 1
     columns = data_lines[0].split()
