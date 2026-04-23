@@ -16,6 +16,14 @@ def _safe_float(value):
         return 0.0
 
 
+def _extract_byte_counters(stat):
+    if isinstance(stat, dict):
+        return _safe_float(stat.get("rx_byt")), _safe_float(stat.get("tx_byt"))
+    if hasattr(stat, "rx_byt") and hasattr(stat, "tx_byt"):
+        return _safe_float(stat.rx_byt), _safe_float(stat.tx_byt)
+    return None
+
+
 def fetch_interface_rates(namespace, display_option, interval=1):
     try:
         portstat = Portstat(namespace, display_option)
@@ -32,24 +40,13 @@ def fetch_interface_rates(namespace, display_option, interval=1):
     for port_name in set(cnstat_dict_1.keys()) & set(cnstat_dict_2.keys()):
         stat_1 = cnstat_dict_1.get(port_name)
         stat_2 = cnstat_dict_2.get(port_name)
-        if not hasattr(stat_1, "get") and not hasattr(stat_1, "rx_byt"):
-            continue
-        if not hasattr(stat_2, "get") and not hasattr(stat_2, "rx_byt"):
+        counters_1 = _extract_byte_counters(stat_1)
+        counters_2 = _extract_byte_counters(stat_2)
+        if counters_1 is None or counters_2 is None:
             continue
 
-        if hasattr(stat_1, "get"):
-            sample1_rx_byt = _safe_float(stat_1.get("rx_byt"))
-            sample1_tx_byt = _safe_float(stat_1.get("tx_byt"))
-        else:
-            sample1_rx_byt = _safe_float(getattr(stat_1, "rx_byt", 0.0))
-            sample1_tx_byt = _safe_float(getattr(stat_1, "tx_byt", 0.0))
-
-        if hasattr(stat_2, "get"):
-            sample2_rx_byt = _safe_float(stat_2.get("rx_byt"))
-            sample2_tx_byt = _safe_float(stat_2.get("tx_byt"))
-        else:
-            sample2_rx_byt = _safe_float(getattr(stat_2, "rx_byt", 0.0))
-            sample2_tx_byt = _safe_float(getattr(stat_2, "tx_byt", 0.0))
+        sample1_rx_byt, sample1_tx_byt = counters_1
+        sample2_rx_byt, sample2_tx_byt = counters_2
 
         if interval > 0:
             rx_mbps = max(0.0, sample2_rx_byt - sample1_rx_byt) * 8 / interval / 1_000_000
