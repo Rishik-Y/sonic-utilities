@@ -16,33 +16,63 @@ def _safe_float(value):
         return 0.0
 
 
-def fetch_interface_rates(namespace, display_option):
+def fetch_interface_rates(namespace, display_option, interval=1):
     try:
         portstat = Portstat(namespace, display_option)
-        _, ratestat_dict = portstat.get_cnstat_dict()
+        cnstat_dict_1, _ = portstat.get_cnstat_dict()
+        if interval > 0:
+            time.sleep(interval)
+            cnstat_dict_2, _ = portstat.get_cnstat_dict()
+        else:
+            cnstat_dict_2 = cnstat_dict_1
     except Exception as e:
         raise click.ClickException(f"Error fetching interface rates: {e}") from e
 
     rates = {}
-    for port_name, stat in ratestat_dict.items():
-        rates[port_name] = {
-            "rx_bps": _safe_float(stat.rx_bps),
-            "tx_bps": _safe_float(stat.tx_bps),
-        }
+    for port_name in set(cnstat_dict_1.keys()) & set(cnstat_dict_2.keys()):
+        stat_1 = cnstat_dict_1.get(port_name)
+        stat_2 = cnstat_dict_2.get(port_name)
+        if not hasattr(stat_1, "get") and not hasattr(stat_1, "rx_byt"):
+            continue
+        if not hasattr(stat_2, "get") and not hasattr(stat_2, "rx_byt"):
+            continue
+
+        if hasattr(stat_1, "get"):
+            sample1_rx_byt = _safe_float(stat_1.get("rx_byt"))
+            sample1_tx_byt = _safe_float(stat_1.get("tx_byt"))
+        else:
+            sample1_rx_byt = _safe_float(getattr(stat_1, "rx_byt", 0.0))
+            sample1_tx_byt = _safe_float(getattr(stat_1, "tx_byt", 0.0))
+
+        if hasattr(stat_2, "get"):
+            sample2_rx_byt = _safe_float(stat_2.get("rx_byt"))
+            sample2_tx_byt = _safe_float(stat_2.get("tx_byt"))
+        else:
+            sample2_rx_byt = _safe_float(getattr(stat_2, "rx_byt", 0.0))
+            sample2_tx_byt = _safe_float(getattr(stat_2, "tx_byt", 0.0))
+
+        if interval > 0:
+            rx_mbps = max(0.0, sample2_rx_byt - sample1_rx_byt) * 8 / interval / 1_000_000
+            tx_mbps = max(0.0, sample2_tx_byt - sample1_tx_byt) * 8 / interval / 1_000_000
+        else:
+            rx_mbps = 0.0
+            tx_mbps = 0.0
+
+        rates[port_name] = {"rx_mbps": rx_mbps, "tx_mbps": tx_mbps}
     return rates
 
 
 def rank_interfaces_by_traffic(port_rates, count):
     ranked = []
     for interface, rates in port_rates.items():
-        rx_bps = _safe_float(rates.get("rx_bps"))
-        tx_bps = _safe_float(rates.get("tx_bps"))
-        total_bps = rx_bps + tx_bps
+        rx_mbps = _safe_float(rates.get("rx_mbps"))
+        tx_mbps = _safe_float(rates.get("tx_mbps"))
+        total_mbps = rx_mbps + tx_mbps
         ranked.append({
             "interface": interface,
-            "rx_mbps": rx_bps / 1_000_000,
-            "tx_mbps": tx_bps / 1_000_000,
-            "total_mbps": total_bps / 1_000_000,
+            "rx_mbps": rx_mbps,
+            "tx_mbps": tx_mbps,
+            "total_mbps": total_mbps,
         })
 
     ranked.sort(key=lambda entry: (-entry["total_mbps"], entry["interface"]))
@@ -72,9 +102,7 @@ def top(namespace, display, count, interval, json_fmt):
     scope, ranks interfaces by total throughput, and prints table or JSON output.
     """
 
-    if interval > 0:
-        time.sleep(interval)
-    rates = fetch_interface_rates(namespace, display)
+    rates = fetch_interface_rates(namespace, display, interval)
 
     top_interfaces = rank_interfaces_by_traffic(rates, count)
 
