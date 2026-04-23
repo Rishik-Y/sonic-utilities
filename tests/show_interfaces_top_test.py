@@ -182,7 +182,10 @@ def test_two_sample_delta_computation():
             )
 
     assert result.exit_code == 0
-    assert "Ethernet0" in result.output
-    assert "400.00" in result.output
-    assert "160.00" in result.output
-    assert "560.00" in result.output
+    data_lines = [line for line in result.output.splitlines() if line.strip() and line.strip()[0].isdigit()]
+    assert len(data_lines) == 1
+    columns = data_lines[0].split()
+    assert columns[1] == "Ethernet0"
+    assert columns[2] == "400.00"
+    assert columns[3] == "160.00"
+    assert columns[4] == "560.00"

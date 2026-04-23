@@ -17,6 +17,7 @@ def _safe_float(value):
 
 
 def _extract_byte_counters(stat):
+    """Return RX/TX byte counters as floats from dict or object stats, else None."""
     if isinstance(stat, dict):
         return _safe_float(stat.get("rx_byt")), _safe_float(stat.get("tx_byt"))
     if hasattr(stat, "rx_byt") and hasattr(stat, "tx_byt"):
