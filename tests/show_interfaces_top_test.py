@@ -8,10 +8,13 @@ from show.interfaces import top as top_module
 
 
 def test_extract_byte_counters():
+    class _NoByteCounters:
+        rx_pps = 1
+
     assert top_module._extract_byte_counters({"rx_byt": "100", "tx_byt": "200"}) == (100.0, 200.0)
     assert top_module._extract_byte_counters(mock.Mock(rx_byt=300, tx_byt=400)) == (300.0, 400.0)
     assert top_module._extract_byte_counters({"rx_byt": "invalid", "tx_byt": None}) == (0.0, 0.0)
-    assert top_module._extract_byte_counters(mock.Mock(rx_pps=1)) is None
+    assert top_module._extract_byte_counters(_NoByteCounters()) is None
 
 
 def test_portstat_layer():
@@ -20,8 +23,8 @@ def test_portstat_layer():
         "Ethernet4": {"rx_byt": 0, "tx_byt": 0},
     }
     cnstat_dict_2 = {
-        "Ethernet0": {"rx_byt": 625000000, "tx_byt": 0},
-        "Ethernet4": {"rx_byt": 0, "tx_byt": 1250000000},
+        "Ethernet0": {"rx_byt": 62_500_000, "tx_byt": 0},
+        "Ethernet4": {"rx_byt": 0, "tx_byt": 125_000_000},
     }
 
     with mock.patch("show.interfaces.top.Portstat") as mock_portstat_cls:
@@ -195,6 +198,6 @@ def test_two_sample_delta_computation():
     assert len(data_lines) == 1
     columns = data_lines[0].split()
     assert columns[1] == "Ethernet0"
-    assert columns[2] == "400.00"
-    assert columns[3] == "160.00"
-    assert columns[4] == "560.00"
+    assert float(columns[2]) == 400.0
+    assert float(columns[3]) == 160.0
+    assert float(columns[4]) == 560.0
