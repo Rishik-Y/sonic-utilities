@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 from unittest import mock
 
 from click.testing import CliRunner
@@ -18,11 +19,14 @@ def test_extract_byte_counters():
 
 
 def test_portstat_layer():
+    base_time = datetime(2024, 1, 1, 0, 0, 0)
     cnstat_dict_1 = {
+        "time": base_time,
         "Ethernet0": {"rx_byt": 0, "tx_byt": 0},
         "Ethernet4": {"rx_byt": 0, "tx_byt": 0},
     }
     cnstat_dict_2 = {
+        "time": base_time + timedelta(seconds=1),
         "Ethernet0": {"rx_byt": 62_500_000, "tx_byt": 0},
         "Ethernet4": {"rx_byt": 0, "tx_byt": 125_000_000},
     }
@@ -171,10 +175,13 @@ def test_top_portstat_error():
 
 
 def test_two_sample_delta_computation():
+    base_time = datetime(2024, 1, 1, 0, 0, 0)
     cnstat_dict_1 = {
+        "time": base_time,
         "Ethernet0": {"rx_byt": 100_000_000, "tx_byt": 50_000_000},
     }
     cnstat_dict_2 = {
+        "time": base_time + timedelta(seconds=5),
         "Ethernet0": {"rx_byt": 350_000_000, "tx_byt": 150_000_000},
     }
 
