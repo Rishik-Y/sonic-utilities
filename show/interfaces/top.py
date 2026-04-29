@@ -37,8 +37,17 @@ def fetch_interface_rates(namespace, display_option, interval=1):
     except Exception as e:
         raise click.ClickException(f"Error fetching interface rates: {e}") from e
 
+    actual_interval = float(interval)
+    if interval > 0:
+        time_1 = cnstat_dict_1.get("time")
+        time_2 = cnstat_dict_2.get("time")
+        if isinstance(time_1, datetime) and isinstance(time_2, datetime):
+            actual_interval = (time_2 - time_1).total_seconds()
+
     rates = {}
     for port_name in set(cnstat_dict_1.keys()) & set(cnstat_dict_2.keys()):
+        if port_name == "time":
+            continue
         stat_1 = cnstat_dict_1.get(port_name)
         stat_2 = cnstat_dict_2.get(port_name)
         counters_1 = _extract_byte_counters(stat_1)
@@ -49,9 +58,9 @@ def fetch_interface_rates(namespace, display_option, interval=1):
         sample1_rx_byt, sample1_tx_byt = counters_1
         sample2_rx_byt, sample2_tx_byt = counters_2
 
-        if interval > 0:
-            rx_mbps = max(0.0, sample2_rx_byt - sample1_rx_byt) * 8 / interval / 1_000_000
-            tx_mbps = max(0.0, sample2_tx_byt - sample1_tx_byt) * 8 / interval / 1_000_000
+        if actual_interval > 0:
+            rx_mbps = max(0.0, sample2_rx_byt - sample1_rx_byt) * 8 / actual_interval / 1_000_000
+            tx_mbps = max(0.0, sample2_tx_byt - sample1_tx_byt) * 8 / actual_interval / 1_000_000
         else:
             rx_mbps = 0.0
             tx_mbps = 0.0
